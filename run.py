@@ -8,7 +8,6 @@ import html_to_json
 from bs4 import BeautifulSoup
 import asyncio
 
-loop = asyncio.get_event_loop()
 
 opt = Options()
 opt.add_argument('--disable-blink-features=AutomationControlled')
@@ -20,71 +19,112 @@ opt.add_experimental_option("prefs", {
     "profile.default_content_setting_values.geolocation": 0,
     "profile.default_content_setting_values.notifications": 1
 })
-browser = webdriver.Chrome(executable_path='./chromedriver',options=opt)
 
 
+class Meets():
 
-# Login Page
-browser.get(
-    'https://accounts.google.com/ServiceLogin?hl=en&passive=true&continue=https://www.google.com/&ec=GAZAAQ')
+    def __init__(self, meet_link, start_time, end_time) -> None:
 
-# input Gmail
-print(browser.find_element_by_id("identifierId"))
-browser.find_element_by_id("identifierId").send_keys("meeting.recorder.revanth@gmail.com")
-browser.find_element_by_id("identifierNext").click()
-browser.implicitly_wait(10)
+        self.browser = webdriver.Chrome(executable_path='./chromedriver',options=opt)
+        # Login Page
+        self.browser.get(
+            'https://accounts.google.com/ServiceLogin?hl=en&passive=true&continue=https://www.google.com/&ec=GAZAAQ')
 
-# input Password
-browser.find_element_by_xpath(
-    '//*[@id="password"]/div[1]/div/div[1]/input').send_keys("Bharathi@123")
-browser.implicitly_wait(10)
-browser.find_element_by_id("passwordNext").click()
-browser.implicitly_wait(1000)
+        # input Gmail
+        # print(self.browser.find_element_by_id("identifierId"))
+        self.browser.find_element_by_id("identifierId").send_keys("meeting.recorder.revanth@gmail.com")
+        self.browser.find_element_by_id("identifierNext").click()
+        self.browser.implicitly_wait(10)
 
-# go to google home page
-browser.get('https://google.com/')
-browser.implicitly_wait(10)
-time.sleep(5)
-#yDmH0d > c-wiz > div > div > div:nth-child(9) > div.crqnQb > div > div > div.QkY02 > div:nth-child(2) > div
+        # input Password
+        self.browser.find_element_by_xpath(
+            '//*[@id="password"]/div[1]/div/div[1]/input').send_keys("Bharathi@123")
+        self.browser.implicitly_wait(10)
+        self.browser.find_element_by_id("passwordNext").click()
+        self.browser.implicitly_wait(1000)
 
+        # go to google home page
+        self.browser.get('https://google.com/')
+        self.browser.implicitly_wait(10)
+        time.sleep(5)
 
+        self.browser.get(meet_link)
 
-browser.get('https://meet.google.com/jsd-zbbr-eou')
-
-browser.implicitly_wait(10)
-time.sleep(4)
-
-browser.find_element_by_css_selector( # mic off
-        'div.U26fgb.JRY2Pb.mUbCce.kpROve.yBiuPb.y1zVCf.HNeRed.M9Bg4d').click()
-
-browser.find_element_by_css_selector( # mic off
-        'div.U26fgb.JRY2Pb.mUbCce.kpROve.yBiuPb.y1zVCf.HNeRed.M9Bg4d').click()
-
-time.sleep(5)
-browser.implicitly_wait(10)
-browser.find_element_by_css_selector(
-        'div.uArJ5e.UQuaGc.Y5sE8d.uyXBBb.xKiqt').click()
-
-
-def open_chat():
-    try:
+        self.browser.implicitly_wait(10)
         time.sleep(4)
-        browser.implicitly_wait(10)
-        browser.find_element_by_xpath(
-                '//button[@aria-label="Chat with everyone"]').click()
-        return True
-    except:
-        print("Failed to open Chat")
-        time.sleep(10)
-        return open_chat()
+
+        self.browser.find_element_by_css_selector( # mic off
+                'div.U26fgb.JRY2Pb.mUbCce.kpROve.yBiuPb.y1zVCf.HNeRed.M9Bg4d').click()
+
+        self.browser.find_element_by_css_selector( # mic off
+                'div.U26fgb.JRY2Pb.mUbCce.kpROve.yBiuPb.y1zVCf.HNeRed.M9Bg4d').click()
+
+        time.sleep(5)
+        self.browser.implicitly_wait(10)
+        self.browser.find_element_by_css_selector(
+                'div.uArJ5e.UQuaGc.Y5sE8d.uyXBBb.xKiqt').click()
+
+        self.participants_data = {}
+        self.participants_count = 1
+
+        self.meet_duration = self.get_meet_duration( # return meet duration in mintutes
+            start_time=start_time,
+            end_time=end_time
+        )
+
+
+        if self.open_chat():
+            for i in range(0,self.meet_duration):
+                self.get_participants_list()
+                self.save_chat_conversation()
+                time.sleep(60)
+
+        self.left_from_call()
+
+
+    def left_from_call(self):
+        # if self.participants_count == 1:
+        self.browser.find_element_by_xpath('//button[@aria-label="Leave call"]').click()
+        print("Left from call")
+        
 
 
 
-async def save_chat_conversation(browser):        
-    for i in range(0,3600):
+    def get_meet_duration(self,start_time,end_time):
+        start_time = datetime.strptime(start_time,"%Y-%m-%dT%H:%M:%S")
+        end_time = datetime.strptime(end_time,"%Y-%m-%dT%H:%M:%S")
+        minutes_difference = (end_time-start_time).total_seconds()/60
+        return int(minutes_difference)
+
+
+
+    def open_chat(self):
+        try:
+            time.sleep(4)
+            self.browser.implicitly_wait(10)
+            self.browser.find_element_by_xpath(
+                    '//button[@aria-label="Chat with everyone"]').click()
+            time.sleep(2)
+            self.browser.find_element_by_xpath(
+                    '//button[@aria-label="Chat with everyone"]').click()
+            time.sleep(2)
+            self.browser.find_element_by_xpath(
+                    '//button[@aria-label="Show everyone"]').click()
+            time.sleep(2)
+            self.browser.find_element_by_xpath(
+                    '//button[@aria-label="Show everyone"]').click()
+            return True
+        except:
+            print("Failed to open Chat")
+            time.sleep(10)
+            return self.open_chat()
+
+
+
+    def save_chat_conversation(self):
+
         messages=[]
-        print(f"increment : {i}")
-        chat_convarsation = browser.find_elements_by_xpath('//div[@class="GDhqjd"]')
+        chat_convarsation = self.browser.find_elements_by_xpath('//div[@class="GDhqjd"]')
         for each_user_chat in chat_convarsation:
             
             temp = {}
@@ -107,24 +147,30 @@ async def save_chat_conversation(browser):
                     })
 
             except:
-                print("unable to read {name} messages".format(**temp))
+                print("unable to read messages".format(**temp))
 
             messages.append(temp)
-        time.sleep(10)
-
 
         with open("messages.json",'w+') as f:
             json.dump(messages,f)
 
 
-async def get_peoples_list(browser):
-    for i in range(0,2000):
-        time.sleep(2)
-        print(f"get_peoples_list {i}")
+    def get_participants_list(self):
 
-if open_chat():
-    save_chat_conversation(browser)
-    asyncio.gather(save_chat_conversation(browser),get_peoples_list(browser))
-   
+        participants_list = self.browser.find_elements_by_xpath('//div[@aria-label="Participants"]//div[@class="kvLJWc"]//span[@class="ZjFb7c"]')
+        time_date = str(datetime.now().strftime("%Y-%m-%dT%H:%M:%S"))
+        temp = []
+        for each_participants in participants_list:
+            temp.append(each_participants.get_attribute('innerHTML'))
+        self.participants_data[time_date] = temp
 
-loop.run_forever()
+        with open("participants_data.json",'w+') as f:
+            json.dump(self.participants_data,f)
+
+
+# meets = Meets()
+Meets(
+    meet_link='https://meet.google.com/xfn-mdpt-bfa', 
+    start_time='2021-11-21T10:30:00',
+    end_time='2021-11-21T10:31:00'
+)
